@@ -1,40 +1,52 @@
-// create the app
+// Create Pixi App (v8 syntax)
 const app = new PIXI.Application({
   width: 800,
   height: 600,
-  backgroundColor: 0x0000ff, // blue background
+  background: "blue",
 });
 
-// append canvas
-document.getElementById("game-container").appendChild(app.view);
+// Attach Pixi canvas to container
+document.getElementById("game-container").appendChild(app.canvas);
 
-// the circle
+// Create the circle
 const circle = new PIXI.Graphics();
 circle.beginFill(0xffffff);
 circle.drawCircle(0, 0, 20);
 circle.endFill();
-circle.x = app.view.width / 2;
-circle.y = app.view.height / 2;
+circle.x = app.screen.width / 2;
+circle.y = app.screen.height / 2;
 app.stage.addChild(circle);
 
-//  velocity
+// velocity
 let vx = 4;
 let vy = 3;
 
-// Create border rectangles (STARTING COLORS)
+// Create border
 const borders = {
-  top: createBorder(0, 0, app.view.width, 10, 0xff0000), // red
-  bottom: createBorder(0, app.view.height - 10, app.view.width, 10, 0xffff00), // yellow
-  left: createBorder(0, 0, 10, app.view.height, 0x00ff00), // green
-  right: createBorder(app.view.width - 10, 0, 10, app.view.height, 0xff00ff), // magenta
+  top: createBorder(0, 0, app.screen.width, 10, 0xff0000),
+  bottom: createBorder(
+    0,
+    app.screen.height - 10,
+    app.screen.width,
+    10,
+    0xffff00
+  ),
+  left: createBorder(0, 0, 10, app.screen.height, 0x00ff00),
+  right: createBorder(
+    app.screen.width - 10,
+    0,
+    10,
+    app.screen.height,
+    0xff00ff
+  ),
 };
 
-// show the neon colors when hit by the circle/ball
+// Neon colors 
 const neonHitColors = {
-  top: 0xffff33, // neon yellow
-  bottom: 0x00ffff, // neon cyan
-  left: 0x39ff14, // neon lime green
-  right: 0xff10f0, // neon hot pink
+  top: 0xffff33,
+  bottom: 0x00ffff,
+  left: 0x39ff14,
+  right: 0xff10f0,
 };
 
 // Track hits
@@ -45,12 +57,11 @@ const hitBorders = {
   right: false,
 };
 
-// Add the borders to the stage
+// Add borders to stage
 for (let key in borders) {
   app.stage.addChild(borders[key]);
 }
 
-// create rectangle border
 function createBorder(x, y, w, h, color) {
   const b = new PIXI.Graphics();
   b.beginFill(color);
@@ -68,14 +79,12 @@ function glowBorder(borderGraphic, neonColor) {
   borderGraphic.endFill();
 }
 
-// when all borders are hit the promise is resolved
 function waitForAllBordersHit() {
   return new Promise((resolve) => {
     app.ticker.add(() => {
       circle.x += vx;
       circle.y += vy;
 
-      // Top
       if (circle.y - 20 <= borders.top.y + 10) {
         vy *= -1;
         if (!hitBorders.top) {
@@ -84,7 +93,6 @@ function waitForAllBordersHit() {
         }
       }
 
-      // Bottom
       if (circle.y + 20 >= borders.bottom.y) {
         vy *= -1;
         if (!hitBorders.bottom) {
@@ -93,7 +101,6 @@ function waitForAllBordersHit() {
         }
       }
 
-      // Left
       if (circle.x - 20 <= borders.left.x + 10) {
         vx *= -1;
         if (!hitBorders.left) {
@@ -102,7 +109,6 @@ function waitForAllBordersHit() {
         }
       }
 
-      // Right
       if (circle.x + 20 >= borders.right.x) {
         vx *= -1;
         if (!hitBorders.right) {
@@ -110,7 +116,7 @@ function waitForAllBordersHit() {
           glowBorder(borders.right, neonHitColors.right);
         }
       }
-      // Stop the game when all 4 have been hit
+
       if (Object.values(hitBorders).every((hit) => hit === true)) {
         resolve();
       }
@@ -120,5 +126,5 @@ function waitForAllBordersHit() {
 
 waitForAllBordersHit().then(() => {
   app.ticker.stop();
-  alert("🏆 Victory! You hit all four borders!");
+  alert("Victory! You hit all four borders!");
 });
