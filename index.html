@@ -17,13 +17,213 @@
     </h2>
 
     <button id="start-button">Start Game with Music</button>
-
     <div id="game-container"></div>
 
     <footer>PixiJS + Promises</footer>
 
-    <!-- PixiJS v8 -->
+    <!-- PIXI v8 -->
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.0.0/dist/pixi.min.js"></script>
-    <script src="main.js"></script>
+
+    <script>
+      // --- PIXI APPLICATION ---
+      const app = new PIXI.Application({
+        width: 800,
+        height: 600,
+        background: 0x001d3d,
+      });
+      document.getElementById("game-container").appendChild(app.view);
+
+      // GAME STATE
+      let vx = 4,
+        vy = 3;
+      let score = 0;
+      const totalBorders = 4;
+      const gameDuration = 60;
+      let startTime = null,
+        gameStarted = false,
+        gameOver = false;
+
+      const bgMusic = new Audio("assets/music.mp3");
+      bgMusic.loop = true;
+      bgMusic.volume = 0.6;
+
+      function randomColor() {
+        return (
+          ((128 + Math.random() * 128) << 16) |
+          ((128 + Math.random() * 128) << 8) |
+          (128 + Math.random() * 128)
+        );
+      }
+
+      // BALL
+      const circle = new PIXI.Graphics();
+      circle.beginFill(0xffffff);
+      circle.drawCircle(0, 0, 20);
+      circle.endFill();
+      circle.x = app.screen.width / 2;
+      circle.y = app.screen.height / 2;
+      app.stage.addChild(circle);
+
+      // BORDERS
+      function createBorder(x, y, w, h, color) {
+        const b = new PIXI.Graphics();
+        b.beginFill(color);
+        b.drawRect(0, 0, w, h);
+        b.endFill();
+        b.x = x;
+        b.y = y;
+        return b;
+      }
+
+      function glowBorder(border, color) {
+        border.clear();
+        border.beginFill(color);
+        border.drawRect(0, 0, border.width, border.height);
+        border.endFill();
+      }
+
+      const borders = {
+        top: createBorder(0, 0, app.screen.width, 10, randomColor()),
+        bottom: createBorder(
+          0,
+          app.screen.height - 10,
+          app.screen.width,
+          10,
+          randomColor()
+        ),
+        left: createBorder(0, 0, 10, app.screen.height, randomColor()),
+        right: createBorder(
+          app.screen.width - 10,
+          0,
+          10,
+          app.screen.height,
+          randomColor()
+        ),
+      };
+
+      const neon = {
+        top: randomColor(),
+        bottom: randomColor(),
+        left: randomColor(),
+        right: randomColor(),
+      };
+
+      const hitBorders = {
+        top: false,
+        bottom: false,
+        left: false,
+        right: false,
+      };
+
+      for (let b in borders) app.stage.addChild(borders[b]);
+
+      // UI TEXT
+      const scoreText = new PIXI.Text(`Score: 0/${totalBorders}`, {
+        fill: 0xffffff,
+        fontSize: 24,
+        fontFamily: "Trebuchet MS",
+      });
+      scoreText.x = 20;
+      scoreText.y = 20;
+      app.stage.addChild(scoreText);
+
+      const timerText = new PIXI.Text(`Time: ${gameDuration}`, {
+        fill: 0xffffff,
+        fontSize: 24,
+        fontFamily: "Trebuchet MS",
+      });
+      timerText.x = app.screen.width - 180;
+      timerText.y = 20;
+      app.stage.addChild(timerText);
+
+      // GAME LOOP (wrapped in a Promise)
+      function waitForEnd() {
+        return new Promise((resolve) => {
+          function loop() {
+            if (gameOver) return;
+
+            const now = Date.now();
+            const elapsed = (now - startTime) / 1000;
+            const remaining = Math.max(0, gameDuration - elapsed);
+            timerText.text = `Time: ${remaining.toFixed(0)}`;
+
+            if (remaining <= 0) {
+              gameOver = true;
+              app.ticker.remove(loop);
+              resolve("timeout");
+              return;
+            }
+
+            circle.x += vx;
+            circle.y += vy;
+
+            if (circle.y - 20 <= 10) {
+              vy *= -1;
+              if (!hitBorders.top) {
+                hitBorders.top = true;
+                score++;
+                scoreText.text = `Score: ${score}/${totalBorders}`;
+                glowBorder(borders.top, neon.top);
+              }
+            }
+            if (circle.y + 20 >= app.screen.height - 10) {
+              vy *= -1;
+              if (!hitBorders.bottom) {
+                hitBorders.bottom = true;
+                score++;
+                scoreText.text = `Score: ${score}/${totalBorders}`;
+                glowBorder(borders.bottom, neon.bottom);
+              }
+            }
+            if (circle.x - 20 <= 10) {
+              vx *= -1;
+              if (!hitBorders.left) {
+                hitBorders.left = true;
+                score++;
+                scoreText.text = `Score: ${score}/${totalBorders}`;
+                glowBorder(borders.left, neon.left);
+              }
+            }
+            if (circle.x + 20 >= app.screen.width - 10) {
+              vx *= -1;
+              if (!hitBorders.right) {
+                hitBorders.right = true;
+                score++;
+                scoreText.text = `Score: ${score}/${totalBorders}`;
+                glowBorder(borders.right, neon.right);
+              }
+            }
+
+            if (Object.values(hitBorders).every((v) => v)) {
+              gameOver = true;
+              app.ticker.remove(loop);
+              resolve("victory");
+            }
+          }
+
+          app.ticker.add(loop);
+        });
+      }
+
+      // START BUTTON
+      startButton.addEventListener("click", () => {
+        if (gameStarted) return;
+        gameStarted = true;
+        startButton.style.display = "none";
+
+        bgMusic.play().catch(() => console.warn("Music blocked"));
+
+        startTime = Date.now();
+
+        waitForEnd().then((result) => {
+          bgMusic.pause();
+          alert(
+            result === "victory"
+              ? "Victory! You hit all four borders!"
+              : "Time’s up! Try again!"
+          );
+        });
+      });
+    </script>
   </body>
 </html>
